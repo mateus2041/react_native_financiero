@@ -42,27 +42,39 @@ export default function Registro() {
         }),
       });
 
-      let data = null;
+      let data: any = null;
 
       try {
         data = await res.json();
-      } catch (e) {
+      } catch {
         data = null;
       }
 
       if (!res.ok) {
-        setMensaje(data?.detail || "Error al registrar");
+        let errorMsg = "Error al registrar";
+
+        if (typeof data?.detail === "string") {
+          errorMsg = data.detail;
+        } else if (
+          Array.isArray(data?.detail) &&
+          data.detail.length > 0
+        ) {
+          errorMsg =
+            data.detail[0]?.msg ||
+            JSON.stringify(data.detail[0]);
+        }
+
+        setMensaje(errorMsg);
         return;
       }
 
-      setMensaje("Usuario creado ✅");
+      setMensaje("Usuario creado correctamente ✅");
 
       setTimeout(() => {
         router.push("/Inicio");
       }, 1500);
-
     } catch (error) {
-      console.log("ERROR REAL:", error);
+      console.log("ERROR:", error);
       setMensaje("Error conectando con el servidor");
     }
   };
@@ -76,7 +88,7 @@ export default function Registro() {
         <Text style={styles.title}>FINANCIERO</Text>
         <Text style={styles.title}>REGISTRO</Text>
 
-        <Text style={styles.label}>Nombre completo</Text>
+        <Text style={styles.label}>Nombre</Text>
         <TextInput
           style={styles.input}
           value={nombre}
@@ -100,21 +112,30 @@ export default function Registro() {
 
         <View style={styles.docContainer}>
           <TouchableOpacity
-            style={[styles.docButton, tipo === "cc" && styles.docButtonActive]}
+            style={[
+              styles.docButton,
+              tipo === "cc" && styles.docButtonActive,
+            ]}
             onPress={() => setTipo("cc")}
           >
             <Text style={styles.docText}>CC</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.docButton, tipo === "ti" && styles.docButtonActive]}
+            style={[
+              styles.docButton,
+              tipo === "ti" && styles.docButtonActive,
+            ]}
             onPress={() => setTipo("ti")}
           >
             <Text style={styles.docText}>TI</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.docButton, tipo === "ce" && styles.docButtonActive]}
+            style={[
+              styles.docButton,
+              tipo === "ce" && styles.docButtonActive,
+            ]}
             onPress={() => setTipo("ce")}
           >
             <Text style={styles.docText}>CE</Text>
@@ -151,23 +172,31 @@ export default function Registro() {
           secureTextEntry
         />
 
-        {mensaje ? (
+        {!!mensaje && (
           <Text
             style={[
               styles.message,
-              { color: mensaje.includes("✅") ? "#00ff66" : "#ff4c4c" },
+              {
+                color: mensaje.includes("✅")
+                  ? "#00ff66"
+                  : "#ff4c4c",
+              },
             ]}
           >
-            {mensaje}
+            {String(mensaje)}
           </Text>
-        ) : null}
+        )}
 
-        <TouchableOpacity style={styles.btn} onPress={registrar}>
+        <TouchableOpacity
+          style={styles.btn}
+          onPress={registrar}
+        >
           <Text style={styles.btnText}>Registrar</Text>
         </TouchableOpacity>
 
         <Text style={styles.footer}>
-          © {new Date().getFullYear()} Financiero. Todos los términos de confidencialidad.
+          © {new Date().getFullYear()} Financiero. Todos los
+          términos de confidencialidad.
         </Text>
       </View>
     </ScrollView>

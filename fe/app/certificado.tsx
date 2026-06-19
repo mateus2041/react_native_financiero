@@ -8,7 +8,8 @@ import {
   Alert,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import RNHTMLtoPDF from "react-native-html-to-pdf";
+import * as Print from "expo-print";
+import * as Sharing from "expo-sharing";
 import { useNavigation } from "@react-navigation/native";
 
 export default function CertificadoBancario() {
@@ -29,12 +30,12 @@ export default function CertificadoBancario() {
           await AsyncStorage.getItem("documento");
 
         if (!documentoGuardado) {
-          navigation.navigate("Inicio");
+          navigation.navigate("Inicio" as never);
           return;
         }
 
         const response = await fetch(
-          `http://127.0.0.1:8000/usuario-documento/${documentoGuardado}`
+          `http://TU_IP:8000/usuario-documento/${documentoGuardado}`
         );
 
         const data = await response.json();
@@ -49,7 +50,7 @@ export default function CertificadoBancario() {
             : "$0 COP",
         });
       } catch (error) {
-        console.log(error);
+        console.log("Error:", error);
       }
     };
 
@@ -63,56 +64,77 @@ export default function CertificadoBancario() {
   });
 
   const generarPDF = async () => {
-    const html = `
+    try {
+      const html = `
       <html>
-      <body style="padding:20px;font-family:Arial">
-        <h1 style="text-align:center">FINANCIERO</h1>
+        <body style="padding:30px;font-family:Arial">
+          <h1 style="text-align:center;color:#355dff">
+            FINANCIERO
+          </h1>
 
-        <h2>HACE CONSTAR:</h2>
+          <h2>HACE CONSTAR:</h2>
 
-        <p>
-          Que el cliente <b>${usuario.nombre}</b>
-          identificado con CC ${usuario.documento}
-          posee una cuenta de ahorros.
-        </p>
+          <p>
+            Que el cliente <b>${usuario.nombre}</b>,
+            identificado con CC <b>${usuario.documento}</b>,
+            posee una cuenta de <b>${usuario.tipoCuenta}</b>.
+          </p>
 
-        <h3>Datos de la cuenta</h3>
+          <h3>Datos de la cuenta</h3>
 
-        <p><b>Número:</b> ${usuario.cuenta}</p>
-        <p><b>Fecha:</b> ${fechaActual}</p>
+          <p><b>Número:</b> ${usuario.cuenta}</p>
+          <p><b>Saldo:</b> ${usuario.saldo}</p>
+          <p><b>Fecha:</b> ${fechaActual}</p>
 
-        <br/>
+          <br/><br/>
 
-        <p>
-          Esta constancia se expide a solicitud
-          del interesado.
-        </p>
+          <p>
+            Esta certificación se expide a solicitud
+            del interesado.
+          </p>
 
-        <br/><br/>
+          <br/><br/><br/>
 
-        <p>Firma autorizada</p>
-        <p>FINANCIERO</p>
-      </body>
+          <p>_________________________</p>
+          <p><b>Firma Autorizada</b></p>
+          <p>FINANCIERO</p>
+        </body>
       </html>
-    `;
+      `;
 
-    const file = await RNHTMLtoPDF.convert({
-      html,
-      fileName: `Certificado_${usuario.documento}`,
-      directory: "Documents",
-    });
+      const { uri } = await Print.printToFileAsync({
+        html,
+      });
 
-    Alert.alert("PDF generado", file.filePath);
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri);
+      }
+
+      Alert.alert(
+        "Éxito",
+        "Certificado generado correctamente"
+      );
+    } catch (error) {
+      console.log(error);
+      Alert.alert(
+        "Error",
+        "No se pudo generar el PDF"
+      );
+    }
   };
 
   const cerrarSesion = async () => {
-    await AsyncStorage.multiRemove([
-      "token",
-      "usuario",
-      "documento",
-    ]);
+    try {
+      await AsyncStorage.multiRemove([
+        "token",
+        "usuario",
+        "documento",
+      ]);
 
-    navigation.navigate("Inicio");
+      navigation.navigate("Inicio" as never);
+    } catch (error) {
+      console.log(error);
+    }
   };
 
   return (
@@ -123,18 +145,20 @@ export default function CertificadoBancario() {
         </Text>
 
         <View style={styles.card}>
-          <Text style={styles.logo}>FINANCIERO</Text>
+          <Text style={styles.logo}>
+            FINANCIERO
+          </Text>
 
           <Text style={styles.subtitle}>
             HACE CONSTAR:
           </Text>
 
           <Text style={styles.text}>
-            Que el cliente {usuario.nombre}
+            Cliente: {usuario.nombre}
           </Text>
 
           <Text style={styles.text}>
-            CC {usuario.documento}
+            Documento: {usuario.documento}
           </Text>
 
           <Text style={styles.text}>
@@ -206,8 +230,8 @@ const styles = StyleSheet.create({
 
   subtitle: {
     fontSize: 22,
-    fontWeight: "bold",
     color: "#fff",
+    fontWeight: "bold",
     marginBottom: 20,
   },
 
@@ -229,11 +253,13 @@ const styles = StyleSheet.create({
     padding: 15,
     borderRadius: 10,
     marginTop: 10,
+    marginBottom: 30,
   },
 
   buttonText: {
     color: "#fff",
     textAlign: "center",
     fontWeight: "bold",
+    fontSize: 16,
   },
 });

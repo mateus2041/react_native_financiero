@@ -23,12 +23,16 @@ const Cuenta = () => {
   const [totalGastos, setTotalGastos] = useState(500);
   const [openTransfer, setOpenTransfer] = useState(false);
 
+  // CARGAR DOCUMENTO
   useEffect(() => {
     const cargarDocumento = async () => {
       const doc = await AsyncStorage.getItem("documento");
 
       if (!doc) {
-        navigation.navigate("Login");
+        navigation.reset({
+          index: 0,
+          routes: [{ name: "Index" }], // o "Login"
+        });
         return;
       }
 
@@ -38,24 +42,28 @@ const Cuenta = () => {
     cargarDocumento();
   }, []);
 
+  // OBTENER USUARIO
   useEffect(() => {
     if (!documento) return;
 
     const obtenerUsuario = async () => {
       try {
         const res = await fetch(
-          `http://127.0.0.1:8000/usuario-documento/${documento}`
+          `http://10.0.2.2:8000/usuario-documento/${documento}`
         );
 
         const data = await res.json();
 
-        if (res.ok && data?.nombre) {
-          setUsuario(data.nombre);
-        } else {
-          setUsuario("Usuario");
-        }
+        console.log("RESPUESTA API:", data);
+
+        setUsuario(
+          data?.nombre ||
+          data?.usuario?.nombre ||
+          data?.data?.nombre ||
+          "Usuario"
+        );
       } catch (error) {
-        console.log(error);
+        console.log("ERROR API:", error);
         setUsuario("Usuario");
       }
     };
@@ -63,6 +71,7 @@ const Cuenta = () => {
     obtenerUsuario();
   }, [documento]);
 
+  // LOGOUT
   const handleLogout = async () => {
     await AsyncStorage.multiRemove([
       "token",
@@ -70,31 +79,25 @@ const Cuenta = () => {
       "documento",
     ]);
 
-    navigation.navigate("Login");
+    navigation.reset({
+      index: 0,
+      routes: [{ name: "Index" }], // 🔥 aquí va tu index.tsx
+    });
   };
 
   return (
     <View style={styles.container}>
       {/* SIDEBAR */}
       <View style={styles.sidebar}>
-        <TouchableOpacity
-          style={styles.menuItem}
-          onPress={() => navigation.navigate("Cuenta")}
-        >
+        <TouchableOpacity onPress={() => navigation.navigate("Cuenta")}>
           <Text style={styles.menuText}>💷 Cuenta</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.menuItem}
-          onPress={() => navigation.navigate("Historial")}
-        >
+        <TouchableOpacity onPress={() => navigation.navigate("Historial")}>
           <Text style={styles.menuText}>📜 Historial Monetario</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.menuItem}
-          onPress={() => setOpenTransfer(!openTransfer)}
-        >
+        <TouchableOpacity onPress={() => setOpenTransfer(!openTransfer)}>
           <Text style={styles.menuText}>
             💳 Otros {openTransfer ? "▲" : "▼"}
           </Text>
@@ -102,51 +105,31 @@ const Cuenta = () => {
 
         {openTransfer && (
           <View style={styles.submenu}>
-            <TouchableOpacity
-              onPress={() => navigation.navigate("Transferencias")}
-            >
-              <Text style={styles.submenuText}>
-                ➡ Enviar dinero
-              </Text>
+            <TouchableOpacity onPress={() => navigation.navigate("Transferencias")}>
+              <Text style={styles.submenuText}>➡ Enviar dinero</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              onPress={() => navigation.navigate("Cuentas")}
-            >
-              <Text style={styles.submenuText}>
-                🧾 Transferir
-              </Text>
+            <TouchableOpacity onPress={() => navigation.navigate("Cuentas")}>
+              <Text style={styles.submenuText}>🧾 Transferir</Text>
             </TouchableOpacity>
           </View>
         )}
 
-        <TouchableOpacity
-          style={styles.menuItem}
-          onPress={() => navigation.navigate("Certificado")}
-        >
-          <Text style={styles.menuText}>
-            📄 Certificado Bancario
-          </Text>
+        <TouchableOpacity onPress={() => navigation.navigate("Certificado")}>
+          <Text style={styles.menuText}>📄 Certificado Bancario</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.menuItem}
-          onPress={() => navigation.navigate("Ajustes")}
-        >
+        <TouchableOpacity onPress={() => navigation.navigate("Ajustes")}>
           <Text style={styles.menuText}>⚙️ Ajustes</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.logout}
-          onPress={handleLogout}
-        >
-          <Text style={styles.logoutText}>
-            🚪 Cerrar sesión
-          </Text>
+        {/* 🔥 BOTÓN LOGOUT */}
+        <TouchableOpacity onPress={() => navigation.navigate("index")}>
+          <Text style={styles.logoutText}>🚪 Cerrar sesión</Text>
         </TouchableOpacity>
       </View>
 
-      {/* CONTENIDO */}
+      {/* MAIN */}
       <ScrollView style={styles.main}>
         <View style={styles.header}>
           <Text style={styles.title}>
@@ -165,9 +148,7 @@ const Cuenta = () => {
         <View style={styles.stats}>
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Ingresos</Text>
-            <Text style={styles.cardValue}>
-              ${totalIngresos}
-            </Text>
+            <Text style={styles.cardValue}>${totalIngresos}</Text>
           </View>
 
           <View style={styles.card}>
@@ -179,9 +160,7 @@ const Cuenta = () => {
 
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Gastos</Text>
-            <Text style={styles.cardValue}>
-              ${totalGastos}
-            </Text>
+            <Text style={styles.cardValue}>${totalGastos}</Text>
           </View>
         </View>
 
@@ -193,15 +172,7 @@ const Cuenta = () => {
 
           <LineChart
             data={{
-              labels: [
-                "Lun",
-                "Mar",
-                "Mié",
-                "Jue",
-                "Vie",
-                "Sáb",
-                "Dom",
-              ],
+              labels: ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"],
               datasets: [
                 {
                   data: [45, 60, 50, 80, 65, 90, 100],
@@ -226,9 +197,7 @@ const Cuenta = () => {
                 `rgba(242,201,76,${opacity})`,
               labelColor: () => "#fff",
             }}
-            style={{
-              borderRadius: 15,
-            }}
+            style={{ borderRadius: 15 }}
           />
         </View>
       </ScrollView>
@@ -252,18 +221,14 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
 
-  menuItem: {
-    paddingVertical: 12,
-  },
-
   menuText: {
     color: "#a8b3cf",
     fontSize: 16,
+    marginVertical: 10,
   },
 
   submenu: {
     marginLeft: 20,
-    marginBottom: 10,
   },
 
   submenuText: {
@@ -275,6 +240,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#355dff",
     padding: 12,
     borderRadius: 10,
+    marginTop: 20,
   },
 
   logoutText: {
@@ -291,7 +257,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 25,
   },
 
   title: {
@@ -309,7 +274,7 @@ const styles = StyleSheet.create({
   stats: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 25,
+    marginVertical: 20,
   },
 
   card: {
@@ -322,7 +287,6 @@ const styles = StyleSheet.create({
 
   cardTitle: {
     color: "#a8b3cf",
-    marginBottom: 10,
   },
 
   cardValue: {
@@ -341,6 +305,5 @@ const styles = StyleSheet.create({
     color: "#fff",
     marginBottom: 15,
     fontSize: 18,
-    fontWeight: "bold",
   },
 });
