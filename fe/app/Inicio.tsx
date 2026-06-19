@@ -5,9 +5,9 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
-  Image,
+  Alert,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 
 export default function Login() {
@@ -17,6 +17,14 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [mostrarPass, setMostrarPass] = useState(false);
   const [mensaje, setMensaje] = useState("");
+
+  const irRegistro = () => {
+    router.push("/Registro");
+  };
+
+  const irRecuperar = () => {
+    router.push("/recuperar");
+  };
 
   const manejarSubmit = async () => {
     if (!documento || !password) {
@@ -38,6 +46,8 @@ export default function Login() {
 
       const data = await res.json();
 
+      console.log(data);
+
       if (!res.ok) {
         setMensaje(data.detail);
         return;
@@ -45,40 +55,43 @@ export default function Login() {
 
       setMensaje("Login exitoso ✅");
 
+      await AsyncStorage.setItem("token", data.token);
+      await AsyncStorage.setItem("documento", documento);
+      await AsyncStorage.setItem("usuario_id", String(data.id));
+
       setTimeout(() => {
         router.push("/cuenta");
       }, 800);
     } catch (error) {
-      console.log(error);
+      console.error(error);
       setMensaje("Error conectando con el servidor");
     }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <View style={styles.formBox}>
-
-        <Text style={styles.title}>FINANCIERO</Text>
         <Text style={styles.title}>Inicio</Text>
 
         <Text style={styles.label}>Documento</Text>
-        <TextInput
-          style={styles.input}
-          value={documento}
-          onChangeText={setDocumento}
-          placeholder="Ingrese documento"
-          placeholderTextColor="#999"
-        />
+
+        <View style={styles.inputIcon}>
+          <TextInput
+            style={styles.input}
+            value={documento}
+            onChangeText={setDocumento}
+            placeholderTextColor="#999"
+          />
+        </View>
 
         <Text style={styles.label}>Contraseña</Text>
 
-        <View style={styles.inputContainer}>
+        <View style={styles.inputIcon}>
           <TextInput
-            style={styles.passwordInput}
+            style={styles.input}
             secureTextEntry={!mostrarPass}
             value={password}
             onChangeText={setPassword}
-            placeholder="Ingrese contraseña"
             placeholderTextColor="#999"
           />
 
@@ -86,19 +99,17 @@ export default function Login() {
             style={styles.eyeBtn}
             onPress={() => setMostrarPass(!mostrarPass)}
           >
-            <Text style={styles.eyeText}>
-              {mostrarPass ? "🙈" : "👁️"}
-            </Text>
+            <Text>{mostrarPass ? "🙈" : "👁️"}</Text>
           </TouchableOpacity>
         </View>
 
         {mensaje ? (
           <Text
             style={[
-              styles.message,
+              styles.mensaje,
               {
                 color: mensaje.includes("exitoso")
-                  ? "#00ff88"
+                  ? "green"
                   : "#ff4c4c",
               },
             ]}
@@ -108,40 +119,34 @@ export default function Login() {
         ) : null}
 
         <TouchableOpacity
-          style={styles.button}
+          style={styles.btn}
           onPress={manejarSubmit}
         >
-          <Text style={styles.buttonText}>ingreso</Text>
+          <Text style={styles.btnText}>Acceder</Text>
         </TouchableOpacity>
 
-        <Text style={styles.loginText}>
+        <Text style={styles.login}>
           ¿No tienes cuenta?{" "}
-          <Text
-            style={styles.link}
-            onPress={() => router.push("/Registro")}
-          >
+          <Text style={styles.link} onPress={irRegistro}>
             Regístrate aquí
           </Text>
         </Text>
 
-        <Text style={styles.loginText}>
+        <Text style={styles.login}>
           ¿Olvidaste tu contraseña?{" "}
-          <Text
-            style={styles.link}
-            onPress={() => router.push("/recuperar")}
-          >
+          <Text style={styles.link} onPress={irRecuperar}>
             Recupérala aquí
           </Text>
         </Text>
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            © {new Date().getFullYear()} Financiero. Todos los derechos reservados.
+            © {new Date().getFullYear()} Financiero. Todos los derechos
+            reservados.
           </Text>
         </View>
-
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -151,111 +156,91 @@ const styles = StyleSheet.create({
     backgroundColor: "#0a0f2c",
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 20,
   },
 
   formBox: {
-    width: "100%",
-    maxWidth: 350,
-  },
-
-  circleImage: {
-    width: 220,
-    height: 220,
-    borderRadius: 110,
-    borderWidth: 4,
-    borderColor: "#d4a017",
-    alignSelf: "center",
-    marginBottom: 20,
+    width: 350,
   },
 
   title: {
+    textAlign: "center",
+    color: "#f5c542",
     fontSize: 32,
     fontWeight: "bold",
-    color: "#f5c542",
-    textAlign: "center",
     marginBottom: 20,
   },
 
   label: {
     color: "#fff",
-    marginBottom: 5,
     marginTop: 10,
+    marginBottom: 5,
     fontSize: 14,
   },
 
+  inputIcon: {
+    position: "relative",
+    justifyContent: "center",
+  },
+
   input: {
-    backgroundColor: "#1e2a4a",
-    borderColor: "#555",
-    borderWidth: 1,
+    width: "100%",
+    padding: 10,
+    paddingRight: 50,
     borderRadius: 10,
-    color: "#fff",
-    padding: 12,
-  },
-
-  inputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#1e2a4a",
-    borderColor: "#555",
     borderWidth: 1,
-    borderRadius: 10,
-  },
-
-  passwordInput: {
-    flex: 1,
+    borderColor: "#555",
+    backgroundColor: "#1e2a4a",
     color: "#fff",
-    padding: 12,
   },
 
   eyeBtn: {
-    width: 45,
+    position: "absolute",
+    right: 5,
+    width: 40,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: "#0f1a35",
     justifyContent: "center",
     alignItems: "center",
   },
 
-  eyeText: {
-    fontSize: 18,
-  },
-
-  button: {
-    backgroundColor: "#000",
-    padding: 14,
-    borderRadius: 12,
-    marginTop: 20,
-  },
-
-  buttonText: {
-    color: "#fff",
-    textAlign: "center",
+  mensaje: {
     fontWeight: "bold",
-    fontSize: 16,
-  },
-
-  message: {
     marginTop: 10,
-    fontWeight: "bold",
     textAlign: "center",
   },
 
-  loginText: {
+  btn: {
+    width: "100%",
+    marginTop: 20,
+    padding: 12,
+    backgroundColor: "#000",
+    borderRadius: 12,
+    alignItems: "center",
+  },
+
+  btnText: {
     color: "#fff",
-    textAlign: "center",
-    marginTop: 15,
+    fontWeight: "bold",
+  },
+
+  login: {
+    color: "#fff",
     fontSize: 13,
+    marginTop: 10,
+    textAlign: "center",
   },
 
   link: {
     color: "#3b82f6",
-    fontWeight: "bold",
   },
 
   footer: {
-    marginTop: 30,
+    marginTop: 25,
   },
 
   footerText: {
-    color: "#aaa",
+    color: "#fff",
     textAlign: "center",
     fontSize: 12,
   },

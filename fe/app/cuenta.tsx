@@ -9,95 +9,97 @@ import {
   Dimensions,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useRouter } from "expo-router";
 import { LineChart } from "react-native-chart-kit";
-import { useNavigation } from "@react-navigation/native";
 
 const screenWidth = Dimensions.get("window").width;
 
-const Cuenta = () => {
-  const navigation = useNavigation();
+export default function Cuenta() {
+  const router = useRouter();
 
   const [usuario, setUsuario] = useState("");
   const [documento, setDocumento] = useState("");
   const [totalIngresos, setTotalIngresos] = useState(1200);
   const [totalGastos, setTotalGastos] = useState(500);
   const [openTransfer, setOpenTransfer] = useState(false);
+  const [id, setId] = useState("");
 
-  // CARGAR DOCUMENTO
   useEffect(() => {
-    const cargarDocumento = async () => {
+    const cargarDatos = async () => {
       const doc = await AsyncStorage.getItem("documento");
+      const id_u = await AsyncStorage.getItem("usuario_id");
 
       if (!doc) {
-        navigation.reset({
-          index: 0,
-          routes: [{ name: "Index" }], // o "Login"
-        });
+        router.replace("/");
         return;
       }
 
       setDocumento(doc);
+      setId(id_u || "");
     };
 
-    cargarDocumento();
+    cargarDatos();
   }, []);
 
-  // OBTENER USUARIO
   useEffect(() => {
-    if (!documento) return;
+    if (!id) return;
 
     const obtenerUsuario = async () => {
       try {
         const res = await fetch(
-          `http://10.0.2.2:8000/usuario-documento/${documento}`
+          `http://127.0.0.1:8000/usuario/${id}`
         );
 
         const data = await res.json();
 
-        console.log("RESPUESTA API:", data);
-
-        setUsuario(
-          data?.nombre ||
-          data?.usuario?.nombre ||
-          data?.data?.nombre ||
-          "Usuario"
-        );
+        if (res.ok && data?.nombre) {
+          setUsuario(data.nombre);
+        } else {
+          setUsuario("Usuario");
+        }
       } catch (error) {
-        console.log("ERROR API:", error);
+        console.log(error);
         setUsuario("Usuario");
       }
     };
 
     obtenerUsuario();
-  }, [documento]);
+  }, [id]);
 
-  // LOGOUT
-  const handleLogout = async () => {
+  const cerrarSesion = async () => {
     await AsyncStorage.multiRemove([
       "token",
       "usuario",
       "documento",
     ]);
 
-    navigation.reset({
-      index: 0,
-      routes: [{ name: "Index" }], // 🔥 aquí va tu index.tsx
-    });
+    router.replace("/");
   };
 
   return (
     <View style={styles.container}>
       {/* SIDEBAR */}
       <View style={styles.sidebar}>
-        <TouchableOpacity onPress={() => navigation.navigate("Cuenta")}>
+        <TouchableOpacity
+          style={styles.menuButton}
+          onPress={() => router.push("/cuenta")}
+        >
           <Text style={styles.menuText}>💷 Cuenta</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => navigation.navigate("Historial")}>
-          <Text style={styles.menuText}>📜 Historial Monetario</Text>
+        <TouchableOpacity
+          style={styles.menuButton}
+          onPress={() => router.push("/historial")}
+        >
+          <Text style={styles.menuText}>
+            📜 Historial Monetario
+          </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => setOpenTransfer(!openTransfer)}>
+        <TouchableOpacity
+          style={styles.menuButton}
+          onPress={() => setOpenTransfer(!openTransfer)}
+        >
           <Text style={styles.menuText}>
             💳 Otros {openTransfer ? "▲" : "▼"}
           </Text>
@@ -105,27 +107,51 @@ const Cuenta = () => {
 
         {openTransfer && (
           <View style={styles.submenu}>
-            <TouchableOpacity onPress={() => navigation.navigate("Transferencias")}>
-              <Text style={styles.submenuText}>➡ Enviar dinero</Text>
+            <TouchableOpacity
+              onPress={() =>
+                router.push("/transferencias")
+              }
+            >
+              <Text style={styles.submenuText}>
+                ➡ Enviar dinero
+              </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={() => navigation.navigate("Cuentas")}>
-              <Text style={styles.submenuText}>🧾 Transferir</Text>
+            <TouchableOpacity
+              onPress={() =>
+                router.push("/cuenta")
+              }
+            >
+              <Text style={styles.submenuText}>
+                🧾 Transferir
+              </Text>
             </TouchableOpacity>
           </View>
         )}
 
-        <TouchableOpacity onPress={() => navigation.navigate("Certificado")}>
-          <Text style={styles.menuText}>📄 Certificado Bancario</Text>
+        <TouchableOpacity
+          style={styles.menuButton}
+          onPress={() => router.push("/certificado")}
+        >
+          <Text style={styles.menuText}>
+            📄 Certificado Bancario
+          </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => navigation.navigate("Ajustes")}>
+        <TouchableOpacity
+          style={styles.menuButton}
+          onPress={() => router.push("/ajustes")}
+        >
           <Text style={styles.menuText}>⚙️ Ajustes</Text>
         </TouchableOpacity>
 
-        {/* 🔥 BOTÓN LOGOUT */}
-        <TouchableOpacity onPress={() => navigation.navigate("index")}>
-          <Text style={styles.logoutText}>🚪 Cerrar sesión</Text>
+        <TouchableOpacity
+          style={styles.logout}
+          onPress={cerrarSesion}
+        >
+          <Text style={styles.logoutText}>
+            🚪 Cerrar sesión
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -147,20 +173,30 @@ const Cuenta = () => {
         {/* TARJETAS */}
         <View style={styles.stats}>
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Ingresos</Text>
-            <Text style={styles.cardValue}>${totalIngresos}</Text>
+            <Text style={styles.cardTitle}>
+              Ingresos
+            </Text>
+            <Text style={styles.cardValue}>
+              ${totalIngresos}
+            </Text>
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Cuenta</Text>
+            <Text style={styles.cardTitle}>
+              Cuenta
+            </Text>
             <Text style={styles.cardValue}>
               ${totalIngresos - totalGastos}
             </Text>
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Gastos</Text>
-            <Text style={styles.cardValue}>${totalGastos}</Text>
+            <Text style={styles.cardTitle}>
+              Gastos
+            </Text>
+            <Text style={styles.cardValue}>
+              ${totalGastos}
+            </Text>
           </View>
         </View>
 
@@ -172,40 +208,45 @@ const Cuenta = () => {
 
           <LineChart
             data={{
-              labels: ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"],
+              labels: [
+                "Lun",
+                "Mar",
+                "Mié",
+                "Jue",
+                "Vie",
+                "Sáb",
+                "Dom",
+              ],
               datasets: [
                 {
-                  data: [45, 60, 50, 80, 65, 90, 100],
-                  color: () => "#f2c94c",
-                  strokeWidth: 3,
-                },
-                {
-                  data: [25, 40, 35, 60, 45, 70, 80],
-                  color: () => "#355dff",
-                  strokeWidth: 3,
+                  data: [
+                    45, 60, 50, 80, 65, 90, 100,
+                  ],
                 },
               ],
             }}
-            width={screenWidth - 70}
-            height={250}
+            width={screenWidth - 100}
+            height={220}
             bezier
             chartConfig={{
+              backgroundColor: "#1a2238",
               backgroundGradientFrom: "#1a2238",
               backgroundGradientTo: "#1a2238",
               decimalPlaces: 0,
               color: (opacity = 1) =>
                 `rgba(242,201,76,${opacity})`,
-              labelColor: () => "#fff",
+              labelColor: (opacity = 1) =>
+                `rgba(255,255,255,${opacity})`,
             }}
-            style={{ borderRadius: 15 }}
+            style={{
+              borderRadius: 16,
+            }}
           />
         </View>
       </ScrollView>
     </View>
   );
-};
-
-export default Cuenta;
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -221,26 +262,29 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
 
+  menuButton: {
+    paddingVertical: 12,
+  },
+
   menuText: {
     color: "#a8b3cf",
-    fontSize: 16,
-    marginVertical: 10,
+    fontSize: 15,
   },
 
   submenu: {
-    marginLeft: 20,
+    marginLeft: 15,
+    marginBottom: 10,
   },
 
   submenuText: {
     color: "#f2c94c",
-    marginVertical: 5,
+    paddingVertical: 6,
   },
 
   logout: {
     backgroundColor: "#355dff",
     padding: 12,
     borderRadius: 10,
-    marginTop: 20,
   },
 
   logoutText: {
@@ -272,38 +316,39 @@ const styles = StyleSheet.create({
   },
 
   stats: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginVertical: 20,
+    marginTop: 20,
   },
 
   card: {
     backgroundColor: "#1a2238",
-    flex: 1,
-    marginHorizontal: 5,
-    padding: 15,
+    padding: 20,
     borderRadius: 15,
+    marginBottom: 15,
   },
 
   cardTitle: {
     color: "#a8b3cf",
+    fontSize: 14,
   },
 
   cardValue: {
     color: "#f2c94c",
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: "bold",
+    marginTop: 10,
   },
 
   chartCard: {
     backgroundColor: "#1a2238",
     padding: 20,
     borderRadius: 20,
+    marginTop: 10,
+    marginBottom: 30,
   },
 
   chartTitle: {
     color: "#fff",
-    marginBottom: 15,
     fontSize: 18,
+    marginBottom: 15,
   },
 });
